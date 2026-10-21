@@ -1,0 +1,29 @@
+{
+  "_doc": "Pondérations du score de confiance. Chaque composante est dans [0,1]. Le score final est la moyenne pondérée des composantes disponibles ; une composante non évaluée (null) est exclue et signalée. Voir docs/QUALIFICATION.md.",
+  "weights": {
+    "fiabilite_source": 0.4,
+    "solidite_preuve": 0.25,
+    "corroboration": 0.2,
+    "fraicheur": 0.15
+  },
+  "source_type_reliability": {
+    "officielle": 0.9,
+    "industrielle": 0.75,
+    "media_specialise": 0.7,
+    "scientifique": 0.8,
+    "secondaire": 0.5,
+    "sociale": 0.4,
+    "non_verifiee": 0.2
+  },
+  "corroboration": {
+    "_doc": "Nombre de domaines distincts ayant publié le document (reprises incluses : ce n'est PAS une corroboration indépendante prouvée).",
+    "par_domaine_supplementaire": 0.25,
+    "max": 1.0,
+    "base_source_unique": 0.25
+  },
+  "fraicheur": {
+    "_doc": "Décroissance linéaire jusqu'à 0 après demi_vie_jours * 2.",
+    "demi_vie_jours": 15
+  },
+  "a_verifier_si_type": ["secondaire", "sociale", "non_verifiee"]
+}

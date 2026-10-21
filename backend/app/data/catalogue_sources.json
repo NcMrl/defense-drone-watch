@@ -1,0 +1,23 @@
+{
+  "_doc": "Catalogue initial de sources CANDIDATES. Aucune de ces URL n'a pu être vérifiée depuis l'environnement de développement (accès réseau restreint). Elles sont importées avec verification_status=non_verifiee ; la première collecte réussie les passe à 'verifiee', un échec les signale en erreur dans l'administration. Corrigez ou désactivez celles qui échouent.",
+  "proposees_le": "2026-10-21",
+  "sources": [
+    {"name": "UK Ministry of Defence (GOV.UK)", "url": "https://www.gov.uk/government/organisations/ministry-of-defence.atom", "homepage": "https://www.gov.uk/government/organisations/ministry-of-defence", "source_type": "officielle", "country": "GB", "language": "en", "priority": 2, "interval_minutes": 15},
+    {"name": "Breaking Defense", "url": "https://breakingdefense.com/feed/", "homepage": "https://breakingdefense.com", "source_type": "media_specialise", "country": "US", "language": "en", "priority": 3, "interval_minutes": 20},
+    {"name": "Defense News", "url": "https://www.defensenews.com/arc/outboundfeeds/rss/", "homepage": "https://www.defensenews.com", "source_type": "media_specialise", "country": "US", "language": "en", "priority": 3, "interval_minutes": 20},
+    {"name": "DroneLife", "url": "https://dronelife.com/feed/", "homepage": "https://dronelife.com", "source_type": "media_specialise", "country": "US", "language": "en", "priority": 4, "interval_minutes": 30},
+    {"name": "Zone Militaire (opex360)", "url": "http://www.opex360.com/feed/", "homepage": "http://www.opex360.com", "source_type": "media_specialise", "country": "FR", "language": "fr", "priority": 3, "interval_minutes": 20},
+    {"name": "Unmanned Systems Technology", "url": "https://www.unmannedsystemstechnology.com/feed/", "homepage": "https://www.unmannedsystemstechnology.com", "source_type": "media_specialise", "country": "GB", "language": "en", "priority": 4, "interval_minutes": 30},
+    {"name": "The War Zone", "url": "https://www.twz.com/feed", "homepage": "https://www.twz.com", "source_type": "media_specialise", "country": "US", "language": "en", "priority": 4, "interval_minutes": 30},
+    {"name": "Naval News", "url": "https://www.navalnews.com/feed/", "homepage": "https://www.navalnews.com", "source_type": "media_specialise", "country": "FR", "language": "en", "priority": 5, "interval_minutes": 60}
+  ],
+  "a_ajouter_apres_verification": [
+    "Ministère des Armées (FR) — identifier un flux RSS officiel actif",
+    "DGA (FR) — communiqués",
+    "Agence européenne de défense (EDA) — actualités",
+    "OTAN — actualités et DIANA",
+    "U.S. Department of Defense — annonces de contrats",
+    "Portails de marchés publics (BOAMP, TED) — via leurs API officielles",
+    "Sites presse des industriels suivis (salles de presse publiques)"
+  ]
+}
