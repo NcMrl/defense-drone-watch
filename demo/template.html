@@ -1,0 +1,311 @@
+<title>Defense Drone Watch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : console de veille — bandeau d'état, indicateurs, puis flux à gauche et fiche détaillée à droite */
+:root {
+  --bg: #f3f5f8;
+  --panel: #ffffff;
+  --ink: #111a2b;
+  --muted: #5a6577;
+  --line: #dbe1ea;
+  --accent: #1f4fa3;
+  --synth: #6d3bd6;
+  --synth-bg: #efe8fd;
+  --ok: #0d7266;
+  --warn: #a8570a;
+  --bad: #b42323;
+  --chip: #eef2f7;
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d131e; --panel: #151d2b; --ink: #e6ebf3; --muted: #95a1b4; --line: #263246;
+    --accent: #7ea6f0; --synth: #b799ff; --synth-bg: #261c40; --ok: #4fc3b0; --warn: #f0a24e; --bad: #f07a7a; --chip: #1d2738;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d131e; --panel: #151d2b; --ink: #e6ebf3; --muted: #95a1b4; --line: #263246;
+  --accent: #7ea6f0; --synth: #b799ff; --synth-bg: #261c40; --ok: #4fc3b0; --warn: #f0a24e; --bad: #f07a7a; --chip: #1d2738;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; display: grid; gap: 16px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.mono { font-family: var(--font-mono); }
+.num { font-variant-numeric: tabular-nums; }
+.eyebrow { font: 500 11px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+header.top h1 { font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+header.top p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+.banner { border: 1px solid var(--synth); background: var(--synth-bg); color: var(--synth); border-radius: 6px; padding: 10px 14px; font-size: 13px; }
+.banner strong { font-weight: 600; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { font: 500 13px var(--font-sans); color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+.kpi .v { font: 600 26px/1.1 var(--font-sans); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.kpi .h { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.kpi.signal .v { color: var(--warn); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.panel > .ph { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.panel > .pb { padding: 14px; }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); } }
+
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 9.5em 1fr 2em; gap: 8px; align-items: center; font-size: 12px; }
+.bar .t { background: var(--chip); border-radius: 2px; height: 10px; overflow: hidden; }
+.bar .t i { display: block; height: 100%; background: var(--accent); }
+.bar span:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.filters input, .filters select { font: 13px var(--font-sans); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+.filters input { flex: 1 1 220px; min-width: 0; }
+.hint { font-size: 11px; color: var(--muted); padding: 6px 14px 0; }
+
+.list { display: grid; }
+.item { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 12px 14px; cursor: pointer; color: inherit; font: inherit; }
+.item:hover { background: var(--chip); }
+.item[aria-current="true"] { background: var(--chip); box-shadow: inset 3px 0 0 var(--accent); }
+.item h3 { font-size: 14px; font-weight: 600; line-height: 1.35; margin-top: 6px; }
+.item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+.badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.b { display: inline-flex; align-items: center; gap: 4px; font: 500 10.5px/16px var(--font-sans); padding: 0 6px; border-radius: 3px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+.b.synth { background: var(--synth); color: var(--panel); letter-spacing: .04em; }
+.b.ok { color: var(--ok); } .b.warn { color: var(--warn); } .b.bad { color: var(--bad); }
+.b.crit { background: var(--bad); color: var(--panel); }
+.b.ent { color: var(--accent); }
+
+.detail h2 { font-size: 18px; font-weight: 600; line-height: 1.3; }
+.detail section { display: grid; gap: 8px; padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--line); }
+.detail dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 13px; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; font-variant-numeric: tabular-nums; }
+.occ { display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: 13px; }
+.occ .n { font: 500 11px/22px var(--font-mono); text-align: center; background: var(--chip); border-radius: 50%; height: 22px; color: var(--muted); }
+.occ a { color: var(--accent); word-break: break-all; font-size: 12px; }
+.comp { display: grid; gap: 2px; font-size: 12px; }
+.comp .row { display: flex; justify-content: space-between; gap: 8px; }
+.comp .row b { font-weight: 500; }
+.comp .meter { height: 5px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+.comp .meter i { display: block; height: 100%; background: var(--accent); }
+.small { font-size: 12px; color: var(--muted); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font: 500 11px var(--font-sans); color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.scroll { overflow-x: auto; }
+.empty { padding: 30px 14px; text-align: center; color: var(--muted); }
+footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 4px; }
+code { font-family: var(--font-mono); font-size: 12px; background: var(--chip); padding: 1px 4px; border-radius: 3px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Veille sources ouvertes · drones & munitions téléopérées</div>
+      <h1>Defense Drone Watch</h1>
+      <p>Démonstration de l'interface de veille : collecte, déduplication, qualification explicable et alertes.</p>
+    </div>
+    <div class="small mono" id="stamp"></div>
+  </header>
+
+  <div class="banner" role="status">
+    <strong>Démonstration — données entièrement fictives.</strong> Entreprises, programmes et articles sont inventés (préfixe « [DÉMO] », domaines <code>.example</code>).
+    Ils ont été produits par le vrai pipeline de la plateforme, puis figés dans cette page. Aucune collecte réelle ne tourne ici.
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <nav class="tabs" role="tablist" aria-label="Vues">
+    <button role="tab" id="tab-flux" aria-selected="true" data-view="flux">Flux & recherche</button>
+    <button role="tab" id="tab-alertes" aria-selected="false" data-view="alertes">Alertes & règles</button>
+    <button role="tab" id="tab-sources" aria-selected="false" data-view="sources">Sources & connecteurs</button>
+    <button role="tab" id="tab-analyse" aria-selected="false" data-view="analyse">Répartitions</button>
+  </nav>
+
+  <div id="view-flux" class="grid2">
+    <div class="panel">
+      <div class="filters">
+        <input id="q" type="search" placeholder='Rechercher ("phrase", -exclure)' aria-label="Recherche">
+        <select id="cat" aria-label="Catégorie"><option value="">Toutes catégories</option></select>
+        <select id="lang" aria-label="Langue"><option value="">Toutes langues</option><option value="fr">Français</option><option value="en">Anglais</option></select>
+      </div>
+      <div class="hint" id="count"></div>
+      <div class="list" id="list"></div>
+    </div>
+    <div class="panel detail"><div class="pb" id="detail"></div></div>
+  </div>
+
+  <div id="view-alertes" class="grid2" hidden>
+    <div class="panel"><div class="ph"><span class="eyebrow">Alertes déclenchées</span></div><div id="alerts"></div></div>
+    <div class="panel"><div class="ph"><span class="eyebrow">Règles de veille</span></div><div class="pb" id="rules"></div></div>
+  </div>
+
+  <div id="view-sources" hidden>
+    <div class="panel"><div class="ph"><span class="eyebrow">Sources</span></div><div class="scroll" id="sources"></div></div>
+    <div class="panel" style="margin-top:16px"><div class="ph"><span class="eyebrow">Connecteurs</span></div><div class="pb" id="connectors"></div></div>
+  </div>
+
+  <div id="view-analyse" class="grid3" hidden>
+    <div class="panel"><div class="ph"><span class="eyebrow">Par catégorie</span></div><div class="pb bars" id="bycat"></div></div>
+    <div class="panel"><div class="ph"><span class="eyebrow">Pays cités</span></div><div class="pb bars" id="bycountry"></div></div>
+    <div class="panel"><div class="ph"><span class="eyebrow">Entreprises citées</span></div><div class="pb bars" id="bycomp"></div></div>
+  </div>
+
+  <footer>
+    <span>La plateforme complète (API FastAPI, PostgreSQL, worker de collecte RSS, interface Next.js) s'installe à partir du dépôt du projet.</span>
+    <span>Les scores de confiance ne tiennent compte ni de la popularité ni des partages. La « solidité de la preuve » reste non évaluée tant que l'extraction des affirmations n'est pas en place.</span>
+  </footer>
+</div>
+
+<script>
+const DATA = __DATA__;
+
+const L = {
+  cat: { drones_aeriens: "Drones aériens", munitions_rodeuses: "Munitions rôdeuses", anti_drones: "Lutte anti-drones", navigation: "Navigation", communications: "Communications", propulsion_energie: "Propulsion & énergie", capteurs: "Capteurs", autonomie_ia: "Autonomie & IA", contrats_programmes: "Contrats & programmes", industrie_partenariats: "Industrie & partenariats", essais_demonstrations: "Essais & démonstrations", salons_evenements: "Salons & événements", reglementation: "Réglementation" },
+  country: { FR: "France", GB: "Royaume-Uni", US: "États-Unis", CA: "Canada", UA: "Ukraine", PL: "Pologne", IL: "Israël", TR: "Turquie", KR: "Corée du Sud", JP: "Japon", IN: "Inde", CN: "Chine", DE: "Allemagne", EU: "Union européenne", NATO: "OTAN" },
+  status: { collecte: "Collecté", en_analyse: "En analyse", a_verifier: "À vérifier", corrobore: "Corroboré", conteste: "Contesté", archive: "Archivé" },
+  match: { origine: "Première détection", url: "Même URL", empreinte: "Contenu identique", titre_similaire: "Titre très similaire" },
+  comp: { fiabilite_source: "Fiabilité de la source", solidite_preuve: "Solidité de la preuve", corroboration: "Corroboration", fraicheur: "Fraîcheur" },
+  sev: { info: "Info", important: "Important", critique: "Critique" },
+  health: { synthetique: "Synthétique", ok: "Opérationnelle", degradee: "Dégradée", en_panne: "En panne", jamais_collectee: "Jamais collectée", desactivee: "Désactivée" },
+  stype: { officielle: "Source primaire officielle", industrielle: "Source industrielle directe", media_specialise: "Média spécialisé", scientifique: "Publication scientifique", secondaire: "Source secondaire", sociale: "Publication sociale", non_verifiee: "Non vérifiée" },
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (iso) => iso ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)) : "—";
+const norm = (s) => String(s ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const safeUrl = (u) => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } };
+const conf = (s) => s == null ? ["Confiance non évaluée", ""] : s >= 0.75 ? ["Confiance élevée", "ok"] : s >= 0.5 ? ["Confiance moyenne", "warn"] : ["Confiance faible", "bad"];
+const delay = (m) => m == null ? "non calculable" : m < 60 ? `${Math.round(m)} min` : m < 1440 ? `${(m / 60).toFixed(1).replace(".", ",")} h` : `${Math.round(m / 1440)} j`;
+
+const docs = DATA.documents;
+let selected = docs[0]?.id ?? null;
+
+function kpis() {
+  const t = DATA.stats.totaux;
+  const tiles = [
+    ["Documents", t.documents, `${t.occurrences} occurrences collectées`],
+    ["Alertes prioritaires non lues", t.alertes_prioritaires_non_lues, "importance « important » ou « critique »", "signal"],
+    ["Taux de déduplication", t.taux_deduplication != null ? `${Math.round(t.taux_deduplication * 100)} %` : "—", "occurrences fusionnées"],
+    ["Pertinents", docs.filter((d) => d.relevance >= 0.6).length, "pertinence ≥ 0,6"],
+    ["Sources", DATA.sources.length, "synthétiques (démonstration)"],
+  ];
+  $("kpis").innerHTML = tiles.map(([l, v, h, c]) => `<div class="kpi ${c || ""}"><div class="eyebrow">${esc(l)}</div><div class="v">${esc(v)}</div><div class="h">${esc(h)}</div></div>`).join("");
+  $("stamp").textContent = `Instantané figé le ${fmt(DATA.stats.genere_le)}`;
+}
+
+function matches(d, q) {
+  const text = norm(`${d.title} ${d.summary ?? ""}`);
+  const phrases = [...q.matchAll(/"([^"]+)"/g)].map((m) => norm(m[1]));
+  const rest = q.replace(/"[^"]*"/g, " ").split(/\s+/).filter(Boolean);
+  const excl = rest.filter((w) => w.startsWith("-") && w.length > 1).map((w) => norm(w.slice(1)));
+  const incl = rest.filter((w) => !w.startsWith("-")).map(norm);
+  return phrases.every((p) => text.includes(p)) && incl.every((w) => text.includes(w)) && !excl.some((w) => text.includes(w));
+}
+
+function card(d) {
+  const [cl, cc] = conf(d.confidence);
+  return `<button class="item" data-id="${d.id}" aria-current="${d.id === selected}">
+    <div class="badges"><span class="b synth">DONNÉE SYNTHÉTIQUE</span><span class="b ${cc}">${cl}${d.confidence != null ? ` · ${Math.round(d.confidence * 100)}` : ""}</span><span class="b">${esc(L.status[d.status] ?? d.status)}</span>${d.occurrence_count > 1 ? `<span class="b">${d.occurrence_count} sources</span>` : ""}</div>
+    <h3>${esc(d.title)}</h3>
+    ${d.summary ? `<p>${esc(d.summary)}</p>` : ""}
+    <div class="meta"><span>${esc(d.source_name ?? d.domain)}</span><span>Publié ${fmt(d.published_at)}</span><span>Collecté ${fmt(d.first_seen_at)}</span></div>
+  </button>`;
+}
+
+function renderList() {
+  const q = $("q").value.trim(), cat = $("cat").value, lang = $("lang").value;
+  const res = docs.filter((d) => (!q || matches(d, q)) && (!cat || d.categories.includes(cat)) && (!lang || d.language === lang));
+  $("count").textContent = `${res.length} résultat(s) sur ${docs.length}`;
+  $("list").innerHTML = res.length ? res.map(card).join("") : `<div class="empty">Aucun document ne correspond.</div>`;
+  if (res.length && !res.some((d) => d.id === selected)) { selected = res[0].id; renderDetail(); highlight(); }
+}
+
+function highlight() { document.querySelectorAll(".item").forEach((el) => el.setAttribute("aria-current", String(Number(el.dataset.id) === selected))); }
+
+function renderDetail() {
+  const d = docs.find((x) => x.id === selected);
+  if (!d) { $("detail").innerHTML = `<div class="empty">Sélectionnez un document.</div>`; return; }
+  const cd = d.confidence_details || {};
+  const comps = Object.entries(cd.composantes || {}).map(([k, c]) => `
+    <div class="comp"><div class="row"><b>${esc(L.comp[k] ?? k)}</b><span class="num">${c.valeur != null ? Math.round(c.valeur * 100) : "non évaluée"} · poids ${esc(cd.ponderations?.[k] ?? "—")}</span></div>
+    <div class="meter"><i style="width:${c.valeur != null ? Math.round(c.valeur * 100) : 0}%"></i></div><div class="small">${esc(c.explication)}</div></div>`).join("");
+  const occ = d.occurrences.map((o, i) => { const u = safeUrl(o.url); return `
+    <div class="occ"><span class="n">${i + 1}</span><div><div><strong>${esc(o.source_name)}</strong> <span class="b">${esc(L.match[o.match_type] ?? o.match_type)}${o.match_type === "titre_similaire" && o.match_score != null ? ` · ${Math.round(o.match_score * 100)} %` : ""}</span></div>
+    ${o.raw_title && o.raw_title !== d.title ? `<div class="small">« ${esc(o.raw_title)} »</div>` : ""}
+    <div class="small">Découvert ${fmt(o.discovered_at)} · publié ${fmt(o.published_at)}</div>${u ? `<span class="mono small">${esc(u)}</span>` : ""}</div></div>`; }).join("");
+  const cls = Object.entries(cd.classification || {}).map(([k, t]) => `<li><strong>${esc(L.cat[k] ?? k)}</strong> : ${esc(t.join(", "))}</li>`).join("");
+  const [cl, cc] = conf(d.confidence);
+  $("detail").innerHTML = `
+    <div class="badges"><span class="b synth">DONNÉE SYNTHÉTIQUE</span><span class="b ${cc}">${cl}</span>${d.categories.map((c) => `<span class="b">${esc(L.cat[c] ?? c)}</span>`).join("")}${d.countries.map((c) => `<span class="b">${esc(L.country[c] ?? c)}</span>`).join("")}</div>
+    <h2 style="margin-top:10px">${esc(d.title)}</h2>
+    <p class="small" style="margin:6px 0 0">${esc(d.summary ?? "Aucun résumé fourni par le flux.")}</p>
+    <p class="small" style="margin:6px 0 0">Les liens <code>.example</code> sont fictifs et ne mènent nulle part. Dans la plateforme, un bouton ouvre la publication d'origine.</p>
+    <section><span class="eyebrow">Horodatage</span><dl>
+      <dt>Publication</dt><dd>${fmt(d.published_at)}</dd><dt>Première collecte</dt><dd>${fmt(d.first_seen_at)}</dd>
+      <dt>Dernière vérification</dt><dd>${fmt(d.last_checked_at)}</dd><dt>Retard de collecte</dt><dd>${delay(d.collection_delay_minutes)}</dd>
+      <dt>Langue d'origine</dt><dd>${esc(d.language ?? "inconnue")}</dd></dl></section>
+    <section><span class="eyebrow">Sources associées (${d.occurrences.length})</span>${occ}
+      <div class="small">Plusieurs reprises d'un même communiqué ne constituent pas une corroboration indépendante.</div></section>
+    <section><span class="eyebrow">Score de confiance · ${cd.score != null ? Math.round(cd.score * 100) : "—"} / 100</span>${comps}</section>
+    ${cls ? `<section><span class="eyebrow">Pourquoi ces catégories</span><ul class="small" style="margin:0;padding-left:18px">${cls}</ul></section>` : ""}
+    ${d.entities.length ? `<section><span class="eyebrow">Entités détectées (dictionnaire)</span><div class="badges">${d.entities.map((e) => `<span class="b ent">${esc(e.name)} · ${esc(e.kind)}</span>`).join("")}</div></section>` : ""}`;
+}
+
+function renderAlerts() {
+  $("alerts").innerHTML = DATA.alerts.length ? DATA.alerts.map((a) => `
+    <button class="item" data-goto="${a.document_id}"><div class="badges"><span class="b ${a.severity === "critique" ? "crit" : a.severity === "important" ? "warn" : ""}">${esc(L.sev[a.severity])}</span><span class="b synth">DONNÉE SYNTHÉTIQUE</span></div>
+    <h3>${esc(a.document_title)}</h3><div class="meta"><span>${esc(a.rule_name)}</span><span>Déclenchée par : ${esc(a.reason)}</span></div></button>`).join("") : `<div class="empty">Aucune alerte.</div>`;
+  $("rules").innerHTML = DATA.rules.map((r) => {
+    const parts = [r.keywords.length && `mots-clés : ${r.keywords.join(", ")}`, r.categories.length && `catégories : ${r.categories.map((c) => L.cat[c] ?? c).join(", ")}`, r.countries.length && `pays : ${r.countries.join(", ")}`].filter(Boolean);
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="badges"><span class="b ${r.severity === "critique" ? "crit" : r.severity === "important" ? "warn" : ""}">${esc(L.sev[r.severity])}</span></div><div style="font-weight:500;margin-top:4px">${esc(r.name)}</div><div class="small">${esc(parts.join(" · "))}</div></div>`;
+  }).join("") + `<p class="small">Une règle ne notifie qu'une fois par document, doublons fusionnés compris (contrainte en base).</p>`;
+}
+
+function renderSources() {
+  $("sources").innerHTML = `<table><thead><tr><th>Source</th><th>Type</th><th>État</th><th>Dernière erreur</th><th class="num">Docs</th></tr></thead><tbody>${DATA.sources.map((s) => `
+    <tr><td><strong>${esc(s.name)}</strong><div class="small mono">${esc(s.url)}</div></td><td>${esc(L.stype[s.source_type] ?? s.source_type)}</td><td><span class="b">${esc(L.health[s.health] ?? s.health)}</span></td>
+    <td class="small" style="color:${s.last_error ? "var(--bad)" : "var(--muted)"}">${esc(s.last_error ?? "—")}</td><td class="num">${s.document_count}</td></tr>`).join("")}</tbody></table>`;
+  $("connectors").innerHTML = DATA.connectors.map((c) => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="badges"><strong style="font-size:13px;margin-right:6px">${esc(c.label)}</strong><span class="b ${c.configured ? "ok" : "warn"}">${c.configured ? "Opérationnel" : c.implemented ? "Non configuré" : "Non implémenté"}</span></div>
+    <div class="small" style="margin-top:4px"><strong>Accès :</strong> ${esc(c.access_method)}</div><div class="small"><strong>Limites :</strong> ${esc(c.limits)}</div></div>`).join("");
+}
+
+function bars(el, rows, lab) {
+  const max = Math.max(1, ...rows.map((r) => r.n));
+  $(el).innerHTML = rows.length ? rows.slice(0, 10).map((r) => `<div class="bar"><span>${esc(lab(r.cle))}</span><span class="t"><i style="width:${(r.n / max) * 100}%"></i></span><span>${r.n}</span></div>`).join("") : `<div class="small">Aucune donnée.</div>`;
+}
+
+function show(view) {
+  ["flux", "alertes", "sources", "analyse"].forEach((v) => { $(`view-${v}`).hidden = v !== view; $(`tab-${v}`).setAttribute("aria-selected", String(v === view)); });
+}
+
+document.querySelector(".tabs").addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.view; if (v) { show(v); try { history.replaceState(null, "", `#${v}`); } catch {} } });
+$("list").addEventListener("click", (e) => { const b = e.target.closest(".item"); if (!b) return; selected = Number(b.dataset.id); highlight(); renderDetail(); });
+$("alerts").addEventListener("click", (e) => { const b = e.target.closest("[data-goto]"); if (!b) return; selected = Number(b.dataset.goto); $("q").value = ""; $("cat").value = ""; $("lang").value = ""; show("flux"); renderList(); highlight(); renderDetail(); });
+["q", "cat", "lang"].forEach((id) => $(id).addEventListener("input", renderList));
+$("cat").innerHTML += Object.entries(L.cat).filter(([k]) => docs.some((d) => d.categories.includes(k))).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+
+kpis(); renderList(); renderDetail(); renderAlerts(); renderSources();
+bars("bycat", DATA.stats.par_categorie, (k) => L.cat[k] ?? k);
+bars("bycountry", DATA.stats.par_pays, (k) => L.country[k] ?? k);
+bars("bycomp", DATA.stats.entreprises_plus_citees, (k) => k);
+const h = location.hash.slice(1); if (["flux", "alertes", "sources", "analyse"].includes(h)) show(h);
+</script>

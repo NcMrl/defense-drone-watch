@@ -1,0 +1,311 @@
+<title>Defense Drone Watch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : console de veille — bandeau d'état, indicateurs, puis flux à gauche et fiche détaillée à droite */
+:root {
+  --bg: #f3f5f8;
+  --panel: #ffffff;
+  --ink: #111a2b;
+  --muted: #5a6577;
+  --line: #dbe1ea;
+  --accent: #1f4fa3;
+  --synth: #6d3bd6;
+  --synth-bg: #efe8fd;
+  --ok: #0d7266;
+  --warn: #a8570a;
+  --bad: #b42323;
+  --chip: #eef2f7;
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d131e; --panel: #151d2b; --ink: #e6ebf3; --muted: #95a1b4; --line: #263246;
+    --accent: #7ea6f0; --synth: #b799ff; --synth-bg: #261c40; --ok: #4fc3b0; --warn: #f0a24e; --bad: #f07a7a; --chip: #1d2738;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d131e; --panel: #151d2b; --ink: #e6ebf3; --muted: #95a1b4; --line: #263246;
+  --accent: #7ea6f0; --synth: #b799ff; --synth-bg: #261c40; --ok: #4fc3b0; --warn: #f0a24e; --bad: #f07a7a; --chip: #1d2738;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; display: grid; gap: 16px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.mono { font-family: var(--font-mono); }
+.num { font-variant-numeric: tabular-nums; }
+.eyebrow { font: 500 11px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+header.top h1 { font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+header.top p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+.banner { border: 1px solid var(--synth); background: var(--synth-bg); color: var(--synth); border-radius: 6px; padding: 10px 14px; font-size: 13px; }
+.banner strong { font-weight: 600; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { font: 500 13px var(--font-sans); color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+.kpi .v { font: 600 26px/1.1 var(--font-sans); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.kpi .h { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.kpi.signal .v { color: var(--warn); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.panel > .ph { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.panel > .pb { padding: 14px; }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); } }
+
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 9.5em 1fr 2em; gap: 8px; align-items: center; font-size: 12px; }
+.bar .t { background: var(--chip); border-radius: 2px; height: 10px; overflow: hidden; }
+.bar .t i { display: block; height: 100%; background: var(--accent); }
+.bar span:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.filters input, .filters select { font: 13px var(--font-sans); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+.filters input { flex: 1 1 220px; min-width: 0; }
+.hint { font-size: 11px; color: var(--muted); padding: 6px 14px 0; }
+
+.list { display: grid; }
+.item { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 12px 14px; cursor: pointer; color: inherit; font: inherit; }
+.item:hover { background: var(--chip); }
+.item[aria-current="true"] { background: var(--chip); box-shadow: inset 3px 0 0 var(--accent); }
+.item h3 { font-size: 14px; font-weight: 600; line-height: 1.35; margin-top: 6px; }
+.item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+.badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.b { display: inline-flex; align-items: center; gap: 4px; font: 500 10.5px/16px var(--font-sans); padding: 0 6px; border-radius: 3px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+.b.synth { background: var(--synth); color: var(--panel); letter-spacing: .04em; }
+.b.ok { color: var(--ok); } .b.warn { color: var(--warn); } .b.bad { color: var(--bad); }
+.b.crit { background: var(--bad); color: var(--panel); }
+.b.ent { color: var(--accent); }
+
+.detail h2 { font-size: 18px; font-weight: 600; line-height: 1.3; }
+.detail section { display: grid; gap: 8px; padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--line); }
+.detail dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 13px; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; font-variant-numeric: tabular-nums; }
+.occ { display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: 13px; }
+.occ .n { font: 500 11px/22px var(--font-mono); text-align: center; background: var(--chip); border-radius: 50%; height: 22px; color: var(--muted); }
+.occ a { color: var(--accent); word-break: break-all; font-size: 12px; }
+.comp { display: grid; gap: 2px; font-size: 12px; }
+.comp .row { display: flex; justify-content: space-between; gap: 8px; }
+.comp .row b { font-weight: 500; }
+.comp .meter { height: 5px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+.comp .meter i { display: block; height: 100%; background: var(--accent); }
+.small { font-size: 12px; color: var(--muted); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font: 500 11px var(--font-sans); color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.scroll { overflow-x: auto; }
+.empty { padding: 30px 14px; text-align: center; color: var(--muted); }
+footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 4px; }
+code { font-family: var(--font-mono); font-size: 12px; background: var(--chip); padding: 1px 4px; border-radius: 3px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Veille sources ouvertes · drones & munitions téléopérées</div>
+      <h1>Defense Drone Watch</h1>
+      <p>Démonstration de l'interface de veille : collecte, déduplication, qualification explicable et alertes.</p>
+    </div>
+    <div class="small mono" id="stamp"></div>
+  </header>
+
+  <div class="banner" role="status">
+    <strong>Démonstration — données entièrement fictives.</strong> Entreprises, programmes et articles sont inventés (préfixe « [DÉMO] », domaines <code>.example</code>).
+    Ils ont été produits par le vrai pipeline de la plateforme, puis figés dans cette page. Aucune collecte réelle ne tourne ici.
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <nav class="tabs" role="tablist" aria-label="Vues">
+    <button role="tab" id="tab-flux" aria-selected="true" data-view="flux">Flux & recherche</button>
+    <button role="tab" id="tab-alertes" aria-selected="false" data-view="alertes">Alertes & règles</button>
+    <button role="tab" id="tab-sources" aria-selected="false" data-view="sources">Sources & connecteurs</button>
+    <button role="tab" id="tab-analyse" aria-selected="false" data-view="analyse">Répartitions</button>
+  </nav>
+
+  <div id="view-flux" class="grid2">
+    <div class="panel">
+      <div class="filters">
+        <input id="q" type="search" placeholder='Rechercher ("phrase", -exclure)' aria-label="Recherche">
+        <select id="cat" aria-label="Catégorie"><option value="">Toutes catégories</option></select>
+        <select id="lang" aria-label="Langue"><option value="">Toutes langues</option><option value="fr">Français</option><option value="en">Anglais</option></select>
+      </div>
+      <div class="hint" id="count"></div>
+      <div class="list" id="list"></div>
+    </div>
+    <div class="panel detail"><div class="pb" id="detail"></div></div>
+  </div>
+
+  <div id="view-alertes" class="grid2" hidden>
+    <div class="panel"><div class="ph"><span class="eyebrow">Alertes déclenchées</span></div><div id="alerts"></div></div>
+    <div class="panel"><div class="ph"><span class="eyebrow">Règles de veille</span></div><div class="pb" id="rules"></div></div>
+  </div>
+
+  <div id="view-sources" hidden>
+    <div class="panel"><div class="ph"><span class="eyebrow">Sources</span></div><div class="scroll" id="sources"></div></div>
+    <div class="panel" style="margin-top:16px"><div class="ph"><span class="eyebrow">Connecteurs</span></div><div class="pb" id="connectors"></div></div>
+  </div>
+
+  <div id="view-analyse" class="grid3" hidden>
+    <div class="panel"><div class="ph"><span class="eyebrow">Par catégorie</span></div><div class="pb bars" id="bycat"></div></div>
+    <div class="panel"><div class="ph"><span class="eyebrow">Pays cités</span></div><div class="pb bars" id="bycountry"></div></div>
+    <div class="panel"><div class="ph"><span class="eyebrow">Entreprises citées</span></div><div class="pb bars" id="bycomp"></div></div>
+  </div>
+
+  <footer>
+    <span>La plateforme complète (API FastAPI, PostgreSQL, worker de collecte RSS, interface Next.js) s'installe à partir du dépôt du projet.</span>
+    <span>Les scores de confiance ne tiennent compte ni de la popularité ni des partages. La « solidité de la preuve » reste non évaluée tant que l'extraction des affirmations n'est pas en place.</span>
+  </footer>
+</div>
+
+<script>
+const DATA = {"documents": [{"id": 9, "title": "[DÉMO] European tender for loitering munitions draws several bids", "summary": "A fictional European procurement tender for loitering munitions has reportedly received several bids, according to unnamed sources.", "canonical_url": "https://revue.demo.example/news/loitering-market", "domain": "revue.demo.example", "author": null, "published_at": "2026-10-19T04:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.244327+02:00", "last_checked_at": "2026-10-21T09:24:40.244327+02:00", "updated_at": "2026-10-21T09:24:40.244327+02:00", "language": "en", "source_country": "GB", "countries": [], "categories": ["contrats_programmes", "munitions_rodeuses"], "event_type": "contrats_programmes", "relevance": 0.8, "confidence": 0.625, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 1, "source_name": "[DÉMO] Revue spécialisée fictive", "collection_delay_minutes": 3180.0, "entities": [], "confidence_details": {"score": 0.625, "composantes": {"fraicheur": {"valeur": 0.926, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.25, "explication": "1 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.7, "explication": "Type de source « media_specialise » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées.", "classification": {"munitions_rodeuses": ["loitering munitions"], "contrats_programmes": ["procurement", "tender"]}}, "occurrences": [{"id": 10, "source_id": 2, "source_name": "[DÉMO] Revue spécialisée fictive", "url": "https://revue.demo.example/news/loitering-market", "raw_title": "[DÉMO] European tender for loitering munitions draws several bids", "published_at": "2026-10-19T04:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.244327+02:00", "match_type": "origine", "match_score": null}], "versions": []}, {"id": 8, "title": "[DÉMO] Ouverture d'une usine de batteries pour drones en Pologne", "summary": "Un industriel fictif annonce l'ouverture d'une usine de production de batteries destinées aux drones en Pologne.", "canonical_url": "https://revue.demo.example/news/battery-factory", "domain": "revue.demo.example", "author": null, "published_at": "2026-10-15T09:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.244327+02:00", "last_checked_at": "2026-10-21T09:24:40.244327+02:00", "updated_at": "2026-10-21T09:24:40.244327+02:00", "language": "fr", "source_country": "GB", "countries": ["PL"], "categories": ["drones_aeriens", "industrie_partenariats", "propulsion_energie"], "event_type": "industrie_partenariats", "relevance": 0.9, "confidence": 0.6, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 1, "source_name": "[DÉMO] Revue spécialisée fictive", "collection_delay_minutes": 8640.0, "entities": [], "confidence_details": {"score": 0.6, "composantes": {"fraicheur": {"valeur": 0.8, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.25, "explication": "1 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.7, "explication": "Type de source « media_specialise » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées.", "classification": {"drones_aeriens": ["drones"], "propulsion_energie": ["batteries"], "industrie_partenariats": ["usine", "production"]}}, "occurrences": [{"id": 9, "source_id": 2, "source_name": "[DÉMO] Revue spécialisée fictive", "url": "https://revue.demo.example/news/battery-factory", "raw_title": "[DÉMO] Ouverture d'une usine de batteries pour drones en Pologne", "published_at": "2026-10-15T09:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.244327+02:00", "match_type": "origine", "match_score": null}], "versions": []}, {"id": 7, "title": "[DÉMO] Kestrel Dynamics completes swarm autonomy trial in the United States", "summary": "The fictional company states it completed a swarm autonomy trial. Details remain limited to the company's own statement.", "canonical_url": "https://revue.demo.example/news/swarm-autonomy", "domain": "revue.demo.example", "author": null, "published_at": "2026-10-16T09:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.244327+02:00", "last_checked_at": "2026-10-21T09:24:40.244327+02:00", "updated_at": "2026-10-21T09:24:40.244327+02:00", "language": "en", "source_country": "GB", "countries": ["US"], "categories": ["autonomie_ia", "essais_demonstrations"], "event_type": "essais_demonstrations", "relevance": 0.2, "confidence": 0.607, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 1, "source_name": "[DÉMO] Revue spécialisée fictive", "collection_delay_minutes": 7200.0, "entities": [{"id": 4, "name": "Kestrel Dynamics (fictive)", "kind": "entreprise", "is_synthetic": true}], "confidence_details": {"score": 0.607, "composantes": {"fraicheur": {"valeur": 0.833, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.25, "explication": "1 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.7, "explication": "Type de source « media_specialise » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées.", "classification": {"autonomie_ia": ["autonomy", "swarm"], "essais_demonstrations": ["trial"]}}, "occurrences": [{"id": 8, "source_id": 2, "source_name": "[DÉMO] Revue spécialisée fictive", "url": "https://revue.demo.example/news/swarm-autonomy", "raw_title": "[DÉMO] Kestrel Dynamics completes swarm autonomy trial in the United States", "published_at": "2026-10-16T09:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.244327+02:00", "match_type": "origine", "match_score": null}], "versions": []}, {"id": 6, "title": "[DÉMO] Helios Propulsion unveils hydrogen fuel cell for long-endurance drones", "summary": "The fictional German company presented a fuel cell prototype. The company claims extended endurance; no independent test has been reported.", "canonical_url": "https://revue.demo.example/news/helios-hydrogen", "domain": "revue.demo.example", "author": null, "published_at": "2026-10-18T09:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.244327+02:00", "last_checked_at": "2026-10-21T09:24:40.244327+02:00", "updated_at": "2026-10-21T09:24:40.244327+02:00", "language": "en", "source_country": "GB", "countries": ["DE"], "categories": ["drones_aeriens", "essais_demonstrations", "propulsion_energie"], "event_type": "essais_demonstrations", "relevance": 0.9, "confidence": 0.62, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 1, "source_name": "[DÉMO] Revue spécialisée fictive", "collection_delay_minutes": 4320.0, "entities": [{"id": 3, "name": "Helios Propulsion (fictive)", "kind": "entreprise", "is_synthetic": true}], "confidence_details": {"score": 0.62, "composantes": {"fraicheur": {"valeur": 0.9, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.25, "explication": "1 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.7, "explication": "Type de source « media_specialise » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées.", "classification": {"drones_aeriens": ["drones"], "propulsion_energie": ["propulsion", "hydrogen", "fuel cell"], "essais_demonstrations": ["test"]}}, "occurrences": [{"id": 7, "source_id": 2, "source_name": "[DÉMO] Revue spécialisée fictive", "url": "https://revue.demo.example/news/helios-hydrogen", "raw_title": "[DÉMO] Helios Propulsion unveils hydrogen fuel cell for long-endurance drones", "published_at": "2026-10-18T09:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.244327+02:00", "match_type": "origine", "match_score": null}], "versions": []}, {"id": 5, "title": "[DÉMO] NordLynx Robotics and Kestrel Dynamics announce a counter-UAS partnership", "summary": "The two fictional companies announced a partnership on counter-UAS sensors and radar integration in the United Kingdom.", "canonical_url": "https://revue.demo.example/news/nordlynx-partnership", "domain": "revue.demo.example", "author": "Fictional desk", "published_at": "2026-10-20T09:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.244327+02:00", "last_checked_at": "2026-10-21T09:24:40.244327+02:00", "updated_at": "2026-10-21T09:24:40.244327+02:00", "language": "en", "source_country": "GB", "countries": ["GB"], "categories": ["anti_drones", "capteurs", "drones_aeriens", "industrie_partenariats"], "event_type": "industrie_partenariats", "relevance": 1.0, "confidence": 0.633, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 1, "source_name": "[DÉMO] Revue spécialisée fictive", "collection_delay_minutes": 1440.0, "entities": [{"id": 2, "name": "NordLynx Robotics (fictive)", "kind": "entreprise", "is_synthetic": true}, {"id": 4, "name": "Kestrel Dynamics (fictive)", "kind": "entreprise", "is_synthetic": true}], "confidence_details": {"score": 0.633, "composantes": {"fraicheur": {"valeur": 0.967, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.25, "explication": "1 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.7, "explication": "Type de source « media_specialise » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées.", "classification": {"capteurs": ["sensors", "radar"], "anti_drones": ["counter-uas", "counter uas"], "drones_aeriens": ["uas"], "industrie_partenariats": ["partnership"]}}, "occurrences": [{"id": 6, "source_id": 2, "source_name": "[DÉMO] Revue spécialisée fictive", "url": "https://revue.demo.example/news/nordlynx-partnership", "raw_title": "[DÉMO] NordLynx Robotics and Kestrel Dynamics announce a counter-UAS partnership", "published_at": "2026-10-20T09:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.244327+02:00", "match_type": "origine", "match_score": null}], "versions": []}, {"id": 4, "title": "[DÉMO] Nouvelle réglementation fictive sur la certification des drones", "summary": "Un texte fictif précise les règles de certification des systèmes de drones pour les essais en vol.", "canonical_url": "https://agence.demo.example/communiques/reglementation", "domain": "agence.demo.example", "author": null, "published_at": "2026-10-17T09:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.169796+02:00", "last_checked_at": "2026-10-21T09:24:40.169796+02:00", "updated_at": "2026-10-21T09:24:40.169796+02:00", "language": "fr", "source_country": "FR", "countries": [], "categories": ["drones_aeriens", "essais_demonstrations", "reglementation"], "event_type": "essais_demonstrations", "relevance": 0.9, "confidence": 0.72, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 1, "source_name": "[DÉMO] Agence d'acquisition fictive", "collection_delay_minutes": 5760.0, "entities": [], "confidence_details": {"score": 0.72, "composantes": {"fraicheur": {"valeur": 0.867, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.25, "explication": "1 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.9, "explication": "Type de source « officielle » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées.", "classification": {"drones_aeriens": ["drones"], "reglementation": ["reglementation", "certification"], "essais_demonstrations": ["essais"]}}, "occurrences": [{"id": 4, "source_id": 1, "source_name": "[DÉMO] Agence d'acquisition fictive", "url": "https://agence.demo.example/communiques/reglementation", "raw_title": "[DÉMO] Nouvelle réglementation fictive sur la certification des drones", "published_at": "2026-10-17T09:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.169796+02:00", "match_type": "origine", "match_score": null}], "versions": []}, {"id": 3, "title": "[DÉMO] Présentation de nouveaux drones au salon fictif DemoExpo", "summary": "Plusieurs industriels présenteront des drones et des capteurs optroniques lors du salon fictif DemoExpo.", "canonical_url": "https://agence.demo.example/communiques/salon-demo", "domain": "agence.demo.example", "author": null, "published_at": "2026-10-19T09:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.169796+02:00", "last_checked_at": "2026-10-21T09:24:40.169796+02:00", "updated_at": "2026-10-21T09:24:40.169796+02:00", "language": "fr", "source_country": "FR", "countries": [], "categories": ["capteurs", "drones_aeriens", "salons_evenements"], "event_type": "salons_evenements", "relevance": 0.9, "confidence": 0.733, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 1, "source_name": "[DÉMO] Agence d'acquisition fictive", "collection_delay_minutes": 2880.0, "entities": [], "confidence_details": {"score": 0.733, "composantes": {"fraicheur": {"valeur": 0.933, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.25, "explication": "1 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.9, "explication": "Type de source « officielle » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées.", "classification": {"capteurs": ["capteurs"], "drones_aeriens": ["drones"], "salons_evenements": ["salon"]}}, "occurrences": [{"id": 3, "source_id": 1, "source_name": "[DÉMO] Agence d'acquisition fictive", "url": "https://agence.demo.example/communiques/salon-demo", "raw_title": "[DÉMO] Présentation de nouveaux drones au salon fictif DemoExpo", "published_at": "2026-10-19T09:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.169796+02:00", "match_type": "origine", "match_score": null}], "versions": []}, {"id": 2, "title": "[DÉMO] Campagne d'essais de lutte anti-drones en France avec le système VEILLEUR", "summary": "Une campagne d'essais du système anti-drone VEILLEUR de NordLynx a été annoncée. Aucune performance n'est communiquée.", "canonical_url": "https://agence.demo.example/communiques/lutte-anti-drones-essais", "domain": "agence.demo.example", "author": null, "published_at": "2026-10-20T07:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.169796+02:00", "last_checked_at": "2026-10-21T09:24:40.169796+02:00", "updated_at": "2026-10-21T09:24:40.169796+02:00", "language": "fr", "source_country": "FR", "countries": ["FR"], "categories": ["anti_drones", "drones_aeriens", "essais_demonstrations"], "event_type": "essais_demonstrations", "relevance": 0.9, "confidence": 0.739, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 1, "source_name": "[DÉMO] Agence d'acquisition fictive", "collection_delay_minutes": 1560.0, "entities": [{"id": 2, "name": "NordLynx Robotics (fictive)", "kind": "entreprise", "is_synthetic": true}, {"id": 2, "name": "Système VEILLEUR (fictif)", "kind": "produit", "is_synthetic": true}], "confidence_details": {"score": 0.739, "composantes": {"fraicheur": {"valeur": 0.964, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.25, "explication": "1 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.9, "explication": "Type de source « officielle » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées.", "classification": {"anti_drones": ["anti-drone", "anti drone", "lutte anti-drones"], "drones_aeriens": ["drone", "drones"], "essais_demonstrations": ["essais"]}}, "occurrences": [{"id": 2, "source_id": 1, "source_name": "[DÉMO] Agence d'acquisition fictive", "url": "https://agence.demo.example/communiques/lutte-anti-drones-essais", "raw_title": "[DÉMO] Campagne d'essais de lutte anti-drones en France avec le système VEILLEUR", "published_at": "2026-10-20T07:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.169796+02:00", "match_type": "origine", "match_score": null}], "versions": []}, {"id": 1, "title": "[DÉMO] Aérovigie notifiée d'une commande pour le programme FAUCON-D", "summary": "Le ministère fictif annonce une commande de drones de surveillance auprès d'Aérovigie dans le cadre du programme FAUCON-D. Les livraisons sont annoncées pour une date non précisée.", "canonical_url": "https://agence.demo.example/communiques/faucon-d-commande", "domain": "agence.demo.example", "author": "Service presse fictif", "published_at": "2026-10-21T06:24:40.166202+02:00", "first_seen_at": "2026-10-21T09:24:40.169796+02:00", "last_checked_at": "2026-10-21T09:24:40.244327+02:00", "updated_at": "2026-10-21T09:24:40.169796+02:00", "language": "fr", "source_country": "FR", "countries": [], "categories": ["contrats_programmes", "drones_aeriens"], "event_type": "contrats_programmes", "relevance": 0.8, "confidence": 0.813, "status": "collecte", "version": 1, "is_synthetic": true, "occurrence_count": 2, "source_name": "[DÉMO] Agence d'acquisition fictive", "collection_delay_minutes": 180.0, "entities": [{"id": 1, "name": "Aérovigie (fictive)", "kind": "entreprise", "is_synthetic": true}, {"id": 1, "name": "Programme FAUCON-D (fictif)", "kind": "produit", "is_synthetic": true}], "confidence_details": {"score": 0.813, "composantes": {"fraicheur": {"valeur": 0.996, "explication": "Calculée sur la date de publication (ou de première détection)."}, "corroboration": {"valeur": 0.5, "explication": "2 domaine(s) distinct(s) ont publié ce contenu. Des reprises d'un même communiqué ne constituent pas une corroboration indépendante prouvée."}, "solidite_preuve": {"valeur": null, "explication": "Non évaluée : nécessite l'extraction des affirmations (phase 4)."}, "fiabilite_source": {"valeur": 0.9, "explication": "Type de source « officielle » (valeur par défaut du type)"}}, "non_evaluees": ["solidite_preuve"], "ponderations": {"fraicheur": 0.15, "corroboration": 0.2, "solidite_preuve": 0.25, "fiabilite_source": 0.4}, "avertissement": "La popularité et le nombre de partages ne sont pas pris en compte. Une source officielle atteste l'existence d'une annonce, pas les performances revendiquées."}, "occurrences": [{"id": 1, "source_id": 1, "source_name": "[DÉMO] Agence d'acquisition fictive", "url": "https://agence.demo.example/communiques/faucon-d-commande", "raw_title": "[DÉMO] Aérovigie notifiée d'une commande pour le programme FAUCON-D", "published_at": "2026-10-21T06:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.169796+02:00", "match_type": "origine", "match_score": null}, {"id": 5, "source_id": 2, "source_name": "[DÉMO] Revue spécialisée fictive", "url": "https://revue.demo.example/news/aerovigie-faucon-d", "raw_title": "[DÉMO] Aerovigie notifiée d'une commande pour le programme FAUCON-D", "published_at": "2026-10-21T08:24:40.166202+02:00", "discovered_at": "2026-10-21T09:24:40.244327+02:00", "match_type": "titre_similaire", "match_score": 1.0}], "versions": []}], "stats": {"genere_le": "2026-10-21T10:56:10.433520+00:00", "mode_actualisation": "periodique", "totaux": {"documents": 9, "nouveaux_24h": 9, "pertinents_aujourdhui": 8, "alertes_prioritaires_non_lues": 4, "occurrences": 10, "taux_deduplication": 0.1}, "sources": {"par_etat": {"synthetique": 3, "degradee": 8}, "reelles_actives": 8, "derniere_collecte_reussie": null, "en_erreur": [{"id": 3, "nom": "[DÉMO] Source en erreur simulée", "erreur": "[temporaire] [DÉMO] Erreur simulée : HTTP 503", "echecs_consecutifs": 3, "synthetique": true}, {"id": 8, "nom": "Zone Militaire (opex360)", "erreur": "[temporaire] Erreur réseau : ConnectError", "echecs_consecutifs": 2, "synthetique": false}, {"id": 10, "nom": "The War Zone", "erreur": "[temporaire] Le proxy sortant a refusé la connexion (domaine non autorisé par le réseau ?)", "echecs_consecutifs": 2, "synthetique": false}, {"id": 4, "nom": "UK Ministry of Defence (GOV.UK)", "erreur": "[temporaire] Le proxy sortant a refusé la connexion (domaine non autorisé par le réseau ?)", "echecs_consecutifs": 2, "synthetique": false}, {"id": 6, "nom": "Defense News", "erreur": "[temporaire] Le proxy sortant a refusé la connexion (domaine non autorisé par le réseau ?)", "echecs_consecutifs": 2, "synthetique": false}, {"id": 9, "nom": "Unmanned Systems Technology", "erreur": "[temporaire] Le proxy sortant a refusé la connexion (domaine non autorisé par le réseau ?)", "echecs_consecutifs": 2, "synthetique": false}, {"id": 7, "nom": "DroneLife", "erreur": "[temporaire] Le proxy sortant a refusé la connexion (domaine non autorisé par le réseau ?)", "echecs_consecutifs": 2, "synthetique": false}, {"id": 11, "nom": "Naval News", "erreur": "[temporaire] Le proxy sortant a refusé la connexion (domaine non autorisé par le réseau ?)", "echecs_consecutifs": 2, "synthetique": false}, {"id": 5, "nom": "Breaking Defense", "erreur": "[temporaire] Le proxy sortant a refusé la connexion (domaine non autorisé par le réseau ?)", "echecs_consecutifs": 3, "synthetique": false}]}, "par_categorie": [{"cle": "drones_aeriens", "n": 7}, {"cle": "essais_demonstrations", "n": 4}, {"cle": "anti_drones", "n": 2}, {"cle": "capteurs", "n": 2}, {"cle": "industrie_partenariats", "n": 2}, {"cle": "contrats_programmes", "n": 2}, {"cle": "propulsion_energie", "n": 2}, {"cle": "salons_evenements", "n": 1}, {"cle": "munitions_rodeuses", "n": 1}, {"cle": "reglementation", "n": 1}, {"cle": "autonomie_ia", "n": 1}], "par_pays": [{"cle": "PL", "n": 1}, {"cle": "US", "n": 1}, {"cle": "FR", "n": 1}, {"cle": "GB", "n": 1}, {"cle": "DE", "n": 1}], "par_jour": [{"cle": "2026-10-21", "n": 9}], "par_jour_publication": [{"cle": "2026-10-15", "n": 1}, {"cle": "2026-10-16", "n": 1}, {"cle": "2026-10-17", "n": 1}, {"cle": "2026-10-18", "n": 1}, {"cle": "2026-10-19", "n": 2}, {"cle": "2026-10-20", "n": 2}, {"cle": "2026-10-21", "n": 1}], "entreprises_plus_citees": [{"cle": "Kestrel Dynamics (fictive)", "n": 2}, {"cle": "NordLynx Robotics (fictive)", "n": 2}, {"cle": "Aérovigie (fictive)", "n": 1}, {"cle": "Helios Propulsion (fictive)", "n": 1}]}, "alerts": [{"id": 5, "rule_id": 2, "rule_name": "[DÉMO] Suivi NordLynx", "document_id": 5, "document_title": "[DÉMO] NordLynx Robotics and Kestrel Dynamics announce a counter-UAS partnership", "document_is_synthetic": true, "severity": "critique", "reason": "mots-clés : NordLynx", "created_at": "2026-10-21T09:24:40.264135+02:00", "read_at": null}, {"id": 4, "rule_id": 1, "rule_name": "[DÉMO] Lutte anti-drones", "document_id": 5, "document_title": "[DÉMO] NordLynx Robotics and Kestrel Dynamics announce a counter-UAS partnership", "document_is_synthetic": true, "severity": "important", "reason": "catégories : anti_drones", "created_at": "2026-10-21T09:24:40.263376+02:00", "read_at": null}, {"id": 3, "rule_id": 2, "rule_name": "[DÉMO] Suivi NordLynx", "document_id": 2, "document_title": "[DÉMO] Campagne d'essais de lutte anti-drones en France avec le système VEILLEUR", "document_is_synthetic": true, "severity": "critique", "reason": "mots-clés : NordLynx", "created_at": "2026-10-21T09:24:40.222707+02:00", "read_at": null}, {"id": 2, "rule_id": 1, "rule_name": "[DÉMO] Lutte anti-drones", "document_id": 2, "document_title": "[DÉMO] Campagne d'essais de lutte anti-drones en France avec le système VEILLEUR", "document_is_synthetic": true, "severity": "important", "reason": "catégories : anti_drones", "created_at": "2026-10-21T09:24:40.221793+02:00", "read_at": null}, {"id": 1, "rule_id": 3, "rule_name": "[DÉMO] Contrats drones France", "document_id": 1, "document_title": "[DÉMO] Aérovigie notifiée d'une commande pour le programme FAUCON-D", "document_is_synthetic": true, "severity": "info", "reason": "mots-clés : commande ; catégories : drones_aeriens", "created_at": "2026-10-21T09:24:40.205096+02:00", "read_at": null}], "rules": [{"id": 1, "name": "[DÉMO] Lutte anti-drones", "keywords": [], "exclude_keywords": [], "categories": ["anti_drones"], "countries": [], "company_ids": [], "severity": "important", "enabled": true, "created_at": "2026-10-21T09:24:40.162945+02:00"}, {"id": 2, "name": "[DÉMO] Suivi NordLynx", "keywords": ["NordLynx"], "exclude_keywords": [], "categories": [], "countries": [], "company_ids": [], "severity": "critique", "enabled": true, "created_at": "2026-10-21T09:24:40.164192+02:00"}, {"id": 3, "name": "[DÉMO] Contrats drones France", "keywords": ["commande", "contrat"], "exclude_keywords": [], "categories": ["drones_aeriens"], "countries": [], "company_ids": [], "severity": "info", "enabled": true, "created_at": "2026-10-21T09:24:40.165140+02:00"}], "sources": [{"id": 1, "name": "[DÉMO] Agence d'acquisition fictive", "url": "https://agence.demo.example/flux.xml", "homepage": "https://agence.demo.example", "connector_type": "rss", "source_type": "officielle", "reliability": null, "country": "FR", "language": "fr", "categories": [], "enabled": false, "priority": 5, "interval_minutes": 30, "verification_status": "non_verifiee", "verification_note": "Source synthétique : non collectée.", "is_synthetic": true, "last_run_at": null, "last_success_at": "2026-10-21T09:24:40.166202+02:00", "next_run_at": null, "last_error": null, "consecutive_failures": 0, "health": "synthetique", "document_count": 4}, {"id": 2, "name": "[DÉMO] Revue spécialisée fictive", "url": "https://revue.demo.example/rss", "homepage": "https://revue.demo.example", "connector_type": "rss", "source_type": "media_specialise", "reliability": null, "country": "GB", "language": "en", "categories": [], "enabled": false, "priority": 5, "interval_minutes": 30, "verification_status": "non_verifiee", "verification_note": "Source synthétique : non collectée.", "is_synthetic": true, "last_run_at": null, "last_success_at": "2026-10-21T09:24:40.166202+02:00", "next_run_at": null, "last_error": null, "consecutive_failures": 0, "health": "synthetique", "document_count": 6}, {"id": 3, "name": "[DÉMO] Source en erreur simulée", "url": "https://indisponible.demo.example/flux.xml", "homepage": null, "connector_type": "rss", "source_type": "industrielle", "reliability": null, "country": null, "language": null, "categories": [], "enabled": false, "priority": 5, "interval_minutes": 30, "verification_status": "echec", "verification_note": null, "is_synthetic": true, "last_run_at": "2026-10-21T09:04:40.154056+02:00", "last_success_at": null, "next_run_at": null, "last_error": "[temporaire] [DÉMO] Erreur simulée : HTTP 503", "consecutive_failures": 3, "health": "synthetique", "document_count": 0}], "connectors": [{"type": "rss", "label": "Flux RSS / Atom", "implemented": true, "configured": true, "status_message": "Configuré", "access_method": "HTTP GET du flux public, requête conditionnelle (ETag, If-Modified-Since)", "limits": "Le flux ne contient que les N derniers éléments publiés par la source ; pas de pagination ni d'historique. Une fréquence trop faible peut manquer des éléments.", "terms": "Respect de robots.txt et des conditions d'utilisation du site ; stockage limité au titre, résumé du flux et lien.", "default_interval_minutes": 30, "required_env": []}, {"type": "x", "label": "X (API officielle)", "implemented": false, "configured": false, "status_message": "Interface uniquement — collecte non implémentée. Créer une application sur le portail développeur X puis renseigner DDW_X_BEARER_TOKEN (phase 6).", "access_method": "API officielle X v2 (timelines de comptes, recherche récente selon l'offre souscrite)", "limits": "Accès, volumes et historique dépendent du niveau d'abonnement ; quotas mensuels stricts. Résultats jamais exhaustifs.", "terms": "Conditions du X Developer Agreement ; pas de collecte hors API.", "default_interval_minutes": 60, "required_env": ["DDW_X_BEARER_TOKEN"]}, {"type": "linkedin", "label": "LinkedIn (API officielle / saisie manuelle)", "implemented": false, "configured": false, "status_message": "Interface uniquement — collecte non implémentée. Nécessite une application LinkedIn avec permissions validées par LinkedIn (phase 6).", "access_method": "API officielle LinkedIn selon les permissions accordées (en pratique : pages administrées par le compte). Repli : liens saisis manuellement, imports, fournisseurs licenciés.", "limits": "L'API n'offre généralement pas la lecture des publications de pages ou personnes tierces. Aucune recherche exhaustive des publications n'est possible.", "terms": "Pas de scraping ni de contournement des mécanismes anti-automatisation (conditions LinkedIn).", "default_interval_minutes": 120, "required_env": ["DDW_LINKEDIN_CLIENT_ID", "DDW_LINKEDIN_CLIENT_SECRET"]}]};
+
+const L = {
+  cat: { drones_aeriens: "Drones aériens", munitions_rodeuses: "Munitions rôdeuses", anti_drones: "Lutte anti-drones", navigation: "Navigation", communications: "Communications", propulsion_energie: "Propulsion & énergie", capteurs: "Capteurs", autonomie_ia: "Autonomie & IA", contrats_programmes: "Contrats & programmes", industrie_partenariats: "Industrie & partenariats", essais_demonstrations: "Essais & démonstrations", salons_evenements: "Salons & événements", reglementation: "Réglementation" },
+  country: { FR: "France", GB: "Royaume-Uni", US: "États-Unis", CA: "Canada", UA: "Ukraine", PL: "Pologne", IL: "Israël", TR: "Turquie", KR: "Corée du Sud", JP: "Japon", IN: "Inde", CN: "Chine", DE: "Allemagne", EU: "Union européenne", NATO: "OTAN" },
+  status: { collecte: "Collecté", en_analyse: "En analyse", a_verifier: "À vérifier", corrobore: "Corroboré", conteste: "Contesté", archive: "Archivé" },
+  match: { origine: "Première détection", url: "Même URL", empreinte: "Contenu identique", titre_similaire: "Titre très similaire" },
+  comp: { fiabilite_source: "Fiabilité de la source", solidite_preuve: "Solidité de la preuve", corroboration: "Corroboration", fraicheur: "Fraîcheur" },
+  sev: { info: "Info", important: "Important", critique: "Critique" },
+  health: { synthetique: "Synthétique", ok: "Opérationnelle", degradee: "Dégradée", en_panne: "En panne", jamais_collectee: "Jamais collectée", desactivee: "Désactivée" },
+  stype: { officielle: "Source primaire officielle", industrielle: "Source industrielle directe", media_specialise: "Média spécialisé", scientifique: "Publication scientifique", secondaire: "Source secondaire", sociale: "Publication sociale", non_verifiee: "Non vérifiée" },
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (iso) => iso ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)) : "—";
+const norm = (s) => String(s ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const safeUrl = (u) => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } };
+const conf = (s) => s == null ? ["Confiance non évaluée", ""] : s >= 0.75 ? ["Confiance élevée", "ok"] : s >= 0.5 ? ["Confiance moyenne", "warn"] : ["Confiance faible", "bad"];
+const delay = (m) => m == null ? "non calculable" : m < 60 ? `${Math.round(m)} min` : m < 1440 ? `${(m / 60).toFixed(1).replace(".", ",")} h` : `${Math.round(m / 1440)} j`;
+
+const docs = DATA.documents;
+let selected = docs[0]?.id ?? null;
+
+function kpis() {
+  const t = DATA.stats.totaux;
+  const tiles = [
+    ["Documents", t.documents, `${t.occurrences} occurrences collectées`],
+    ["Alertes prioritaires non lues", t.alertes_prioritaires_non_lues, "importance « important » ou « critique »", "signal"],
+    ["Taux de déduplication", t.taux_deduplication != null ? `${Math.round(t.taux_deduplication * 100)} %` : "—", "occurrences fusionnées"],
+    ["Pertinents", docs.filter((d) => d.relevance >= 0.6).length, "pertinence ≥ 0,6"],
+    ["Sources", DATA.sources.length, "synthétiques (démonstration)"],
+  ];
+  $("kpis").innerHTML = tiles.map(([l, v, h, c]) => `<div class="kpi ${c || ""}"><div class="eyebrow">${esc(l)}</div><div class="v">${esc(v)}</div><div class="h">${esc(h)}</div></div>`).join("");
+  $("stamp").textContent = `Instantané figé le ${fmt(DATA.stats.genere_le)}`;
+}
+
+function matches(d, q) {
+  const text = norm(`${d.title} ${d.summary ?? ""}`);
+  const phrases = [...q.matchAll(/"([^"]+)"/g)].map((m) => norm(m[1]));
+  const rest = q.replace(/"[^"]*"/g, " ").split(/\s+/).filter(Boolean);
+  const excl = rest.filter((w) => w.startsWith("-") && w.length > 1).map((w) => norm(w.slice(1)));
+  const incl = rest.filter((w) => !w.startsWith("-")).map(norm);
+  return phrases.every((p) => text.includes(p)) && incl.every((w) => text.includes(w)) && !excl.some((w) => text.includes(w));
+}
+
+function card(d) {
+  const [cl, cc] = conf(d.confidence);
+  return `<button class="item" data-id="${d.id}" aria-current="${d.id === selected}">
+    <div class="badges"><span class="b synth">DONNÉE SYNTHÉTIQUE</span><span class="b ${cc}">${cl}${d.confidence != null ? ` · ${Math.round(d.confidence * 100)}` : ""}</span><span class="b">${esc(L.status[d.status] ?? d.status)}</span>${d.occurrence_count > 1 ? `<span class="b">${d.occurrence_count} sources</span>` : ""}</div>
+    <h3>${esc(d.title)}</h3>
+    ${d.summary ? `<p>${esc(d.summary)}</p>` : ""}
+    <div class="meta"><span>${esc(d.source_name ?? d.domain)}</span><span>Publié ${fmt(d.published_at)}</span><span>Collecté ${fmt(d.first_seen_at)}</span></div>
+  </button>`;
+}
+
+function renderList() {
+  const q = $("q").value.trim(), cat = $("cat").value, lang = $("lang").value;
+  const res = docs.filter((d) => (!q || matches(d, q)) && (!cat || d.categories.includes(cat)) && (!lang || d.language === lang));
+  $("count").textContent = `${res.length} résultat(s) sur ${docs.length}`;
+  $("list").innerHTML = res.length ? res.map(card).join("") : `<div class="empty">Aucun document ne correspond.</div>`;
+  if (res.length && !res.some((d) => d.id === selected)) { selected = res[0].id; renderDetail(); highlight(); }
+}
+
+function highlight() { document.querySelectorAll(".item").forEach((el) => el.setAttribute("aria-current", String(Number(el.dataset.id) === selected))); }
+
+function renderDetail() {
+  const d = docs.find((x) => x.id === selected);
+  if (!d) { $("detail").innerHTML = `<div class="empty">Sélectionnez un document.</div>`; return; }
+  const cd = d.confidence_details || {};
+  const comps = Object.entries(cd.composantes || {}).map(([k, c]) => `
+    <div class="comp"><div class="row"><b>${esc(L.comp[k] ?? k)}</b><span class="num">${c.valeur != null ? Math.round(c.valeur * 100) : "non évaluée"} · poids ${esc(cd.ponderations?.[k] ?? "—")}</span></div>
+    <div class="meter"><i style="width:${c.valeur != null ? Math.round(c.valeur * 100) : 0}%"></i></div><div class="small">${esc(c.explication)}</div></div>`).join("");
+  const occ = d.occurrences.map((o, i) => { const u = safeUrl(o.url); return `
+    <div class="occ"><span class="n">${i + 1}</span><div><div><strong>${esc(o.source_name)}</strong> <span class="b">${esc(L.match[o.match_type] ?? o.match_type)}${o.match_type === "titre_similaire" && o.match_score != null ? ` · ${Math.round(o.match_score * 100)} %` : ""}</span></div>
+    ${o.raw_title && o.raw_title !== d.title ? `<div class="small">« ${esc(o.raw_title)} »</div>` : ""}
+    <div class="small">Découvert ${fmt(o.discovered_at)} · publié ${fmt(o.published_at)}</div>${u ? `<span class="mono small">${esc(u)}</span>` : ""}</div></div>`; }).join("");
+  const cls = Object.entries(cd.classification || {}).map(([k, t]) => `<li><strong>${esc(L.cat[k] ?? k)}</strong> : ${esc(t.join(", "))}</li>`).join("");
+  const [cl, cc] = conf(d.confidence);
+  $("detail").innerHTML = `
+    <div class="badges"><span class="b synth">DONNÉE SYNTHÉTIQUE</span><span class="b ${cc}">${cl}</span>${d.categories.map((c) => `<span class="b">${esc(L.cat[c] ?? c)}</span>`).join("")}${d.countries.map((c) => `<span class="b">${esc(L.country[c] ?? c)}</span>`).join("")}</div>
+    <h2 style="margin-top:10px">${esc(d.title)}</h2>
+    <p class="small" style="margin:6px 0 0">${esc(d.summary ?? "Aucun résumé fourni par le flux.")}</p>
+    <p class="small" style="margin:6px 0 0">Les liens <code>.example</code> sont fictifs et ne mènent nulle part. Dans la plateforme, un bouton ouvre la publication d'origine.</p>
+    <section><span class="eyebrow">Horodatage</span><dl>
+      <dt>Publication</dt><dd>${fmt(d.published_at)}</dd><dt>Première collecte</dt><dd>${fmt(d.first_seen_at)}</dd>
+      <dt>Dernière vérification</dt><dd>${fmt(d.last_checked_at)}</dd><dt>Retard de collecte</dt><dd>${delay(d.collection_delay_minutes)}</dd>
+      <dt>Langue d'origine</dt><dd>${esc(d.language ?? "inconnue")}</dd></dl></section>
+    <section><span class="eyebrow">Sources associées (${d.occurrences.length})</span>${occ}
+      <div class="small">Plusieurs reprises d'un même communiqué ne constituent pas une corroboration indépendante.</div></section>
+    <section><span class="eyebrow">Score de confiance · ${cd.score != null ? Math.round(cd.score * 100) : "—"} / 100</span>${comps}</section>
+    ${cls ? `<section><span class="eyebrow">Pourquoi ces catégories</span><ul class="small" style="margin:0;padding-left:18px">${cls}</ul></section>` : ""}
+    ${d.entities.length ? `<section><span class="eyebrow">Entités détectées (dictionnaire)</span><div class="badges">${d.entities.map((e) => `<span class="b ent">${esc(e.name)} · ${esc(e.kind)}</span>`).join("")}</div></section>` : ""}`;
+}
+
+function renderAlerts() {
+  $("alerts").innerHTML = DATA.alerts.length ? DATA.alerts.map((a) => `
+    <button class="item" data-goto="${a.document_id}"><div class="badges"><span class="b ${a.severity === "critique" ? "crit" : a.severity === "important" ? "warn" : ""}">${esc(L.sev[a.severity])}</span><span class="b synth">DONNÉE SYNTHÉTIQUE</span></div>
+    <h3>${esc(a.document_title)}</h3><div class="meta"><span>${esc(a.rule_name)}</span><span>Déclenchée par : ${esc(a.reason)}</span></div></button>`).join("") : `<div class="empty">Aucune alerte.</div>`;
+  $("rules").innerHTML = DATA.rules.map((r) => {
+    const parts = [r.keywords.length && `mots-clés : ${r.keywords.join(", ")}`, r.categories.length && `catégories : ${r.categories.map((c) => L.cat[c] ?? c).join(", ")}`, r.countries.length && `pays : ${r.countries.join(", ")}`].filter(Boolean);
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="badges"><span class="b ${r.severity === "critique" ? "crit" : r.severity === "important" ? "warn" : ""}">${esc(L.sev[r.severity])}</span></div><div style="font-weight:500;margin-top:4px">${esc(r.name)}</div><div class="small">${esc(parts.join(" · "))}</div></div>`;
+  }).join("") + `<p class="small">Une règle ne notifie qu'une fois par document, doublons fusionnés compris (contrainte en base).</p>`;
+}
+
+function renderSources() {
+  $("sources").innerHTML = `<table><thead><tr><th>Source</th><th>Type</th><th>État</th><th>Dernière erreur</th><th class="num">Docs</th></tr></thead><tbody>${DATA.sources.map((s) => `
+    <tr><td><strong>${esc(s.name)}</strong><div class="small mono">${esc(s.url)}</div></td><td>${esc(L.stype[s.source_type] ?? s.source_type)}</td><td><span class="b">${esc(L.health[s.health] ?? s.health)}</span></td>
+    <td class="small" style="color:${s.last_error ? "var(--bad)" : "var(--muted)"}">${esc(s.last_error ?? "—")}</td><td class="num">${s.document_count}</td></tr>`).join("")}</tbody></table>`;
+  $("connectors").innerHTML = DATA.connectors.map((c) => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="badges"><strong style="font-size:13px;margin-right:6px">${esc(c.label)}</strong><span class="b ${c.configured ? "ok" : "warn"}">${c.configured ? "Opérationnel" : c.implemented ? "Non configuré" : "Non implémenté"}</span></div>
+    <div class="small" style="margin-top:4px"><strong>Accès :</strong> ${esc(c.access_method)}</div><div class="small"><strong>Limites :</strong> ${esc(c.limits)}</div></div>`).join("");
+}
+
+function bars(el, rows, lab) {
+  const max = Math.max(1, ...rows.map((r) => r.n));
+  $(el).innerHTML = rows.length ? rows.slice(0, 10).map((r) => `<div class="bar"><span>${esc(lab(r.cle))}</span><span class="t"><i style="width:${(r.n / max) * 100}%"></i></span><span>${r.n}</span></div>`).join("") : `<div class="small">Aucune donnée.</div>`;
+}
+
+function show(view) {
+  ["flux", "alertes", "sources", "analyse"].forEach((v) => { $(`view-${v}`).hidden = v !== view; $(`tab-${v}`).setAttribute("aria-selected", String(v === view)); });
+}
+
+document.querySelector(".tabs").addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.view; if (v) { show(v); try { history.replaceState(null, "", `#${v}`); } catch {} } });
+$("list").addEventListener("click", (e) => { const b = e.target.closest(".item"); if (!b) return; selected = Number(b.dataset.id); highlight(); renderDetail(); });
+$("alerts").addEventListener("click", (e) => { const b = e.target.closest("[data-goto]"); if (!b) return; selected = Number(b.dataset.goto); $("q").value = ""; $("cat").value = ""; $("lang").value = ""; show("flux"); renderList(); highlight(); renderDetail(); });
+["q", "cat", "lang"].forEach((id) => $(id).addEventListener("input", renderList));
+$("cat").innerHTML += Object.entries(L.cat).filter(([k]) => docs.some((d) => d.categories.includes(k))).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+
+kpis(); renderList(); renderDetail(); renderAlerts(); renderSources();
+bars("bycat", DATA.stats.par_categorie, (k) => L.cat[k] ?? k);
+bars("bycountry", DATA.stats.par_pays, (k) => L.country[k] ?? k);
+bars("bycomp", DATA.stats.entreprises_plus_citees, (k) => k);
+const h = location.hash.slice(1); if (["flux", "alertes", "sources", "analyse"].includes(h)) show(h);
+</script>
